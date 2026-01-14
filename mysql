@@ -1,0 +1,176 @@
+-- Create database
+CREATE DATABASE IF NOT EXISTS internship_management;
+USE internship_management;
+
+-- User table (parent)
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    role ENUM('student','employer','officer') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Company table
+CREATE TABLE companies (
+    company_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    industry VARCHAR(100),
+    website VARCHAR(150),
+    contact_email VARCHAR(100),
+    address VARCHAR(255)
+);
+
+-- Student table
+CREATE TABLE students (
+    user_id INT PRIMARY KEY,
+    student_roll_no VARCHAR(20) UNIQUE,
+    program VARCHAR(100),
+    year_of_study INT,
+    gpa DECIMAL(3,2),
+    preferred_domains VARCHAR(255),
+    availability_start_date DATE,
+    availability_end_date DATE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
+
+-- Placement officer table
+CREATE TABLE placement_officers (
+    user_id INT PRIMARY KEY,
+    office_location VARCHAR(100),
+    phone VARCHAR(20),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
+
+-- Employer representative table
+CREATE TABLE employer_reps (
+    user_id INT PRIMARY KEY,
+    company_id INT,
+    designation VARCHAR(100),
+    phone VARCHAR(20),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (company_id) REFERENCES companies(company_id)
+);
+
+-- Internship postings
+CREATE TABLE internship_postings (
+    posting_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT,
+    posted_by INT,
+    title VARCHAR(150),
+    description TEXT,
+    min_gpa DECIMAL(3,2),
+    location VARCHAR(100),
+    stipend DECIMAL(10,2),
+    start_date DATE,
+    end_date DATE,
+    application_deadline DATE,
+    FOREIGN KEY (company_id) REFERENCES companies(company_id),
+    FOREIGN KEY (posted_by) REFERENCES employer_reps(user_id)
+);
+
+-- Skills table
+CREATE TABLE skills (
+    skill_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    category VARCHAR(100)
+);
+
+-- Skills required for internship
+CREATE TABLE posting_skills (
+    posting_skill_id INT AUTO_INCREMENT PRIMARY KEY,
+    posting_id INT,
+    skill_id INT,
+    required_level VARCHAR(50),
+    FOREIGN KEY (posting_id) REFERENCES internship_postings(posting_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills(skill_id)
+        ON DELETE CASCADE
+);
+
+-- Skills owned by student
+CREATE TABLE student_skills (
+    student_skill_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT,
+    skill_id INT,
+    proficiency_level VARCHAR(50),
+    years_experience INT,
+    FOREIGN KEY (student_id) REFERENCES students(user_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills(skill_id)
+        ON DELETE CASCADE
+);
+
+-- Resume table
+CREATE TABLE resumes (
+    resume_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT,
+    file_url VARCHAR(255),
+    parsed_text TEXT,
+    FOREIGN KEY (student_id) REFERENCES students(user_id)
+        ON DELETE CASCADE
+);
+
+-- Applications table
+CREATE TABLE applications (
+    application_id INT AUTO_INCREMENT PRIMARY KEY,
+    posting_id INT,
+    student_id INT,
+    status ENUM('applied','shortlisted','rejected','selected') DEFAULT 'applied',
+    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    matching_score DECIMAL(5,2),
+    shortlist_reason TEXT,
+    FOREIGN KEY (posting_id) REFERENCES internship_postings(posting_id),
+    FOREIGN KEY (student_id) REFERENCES students(user_id)
+);
+
+-- Interview table
+CREATE TABLE interviews (
+    interview_id INT AUTO_INCREMENT PRIMARY KEY,
+    application_id INT,
+    scheduled_at DATETIME,
+    mode ENUM('online','physical'),
+    interviewer_id INT,
+    FOREIGN KEY (application_id) REFERENCES applications(application_id)
+        ON DELETE CASCADE
+);
+
+-- Assessment table
+CREATE TABLE assessments (
+    assessment_id INT AUTO_INCREMENT PRIMARY KEY,
+    application_id INT,
+    type VARCHAR(100),
+    score DECIMAL(5,2),
+    max_score DECIMAL(5,2),
+    assessed_by INT,
+    FOREIGN KEY (application_id) REFERENCES applications(application_id)
+        ON DELETE CASCADE
+);
+
+-- Internship outcome table
+CREATE TABLE internship_outcomes (
+    outcome_id INT AUTO_INCREMENT PRIMARY KEY,
+    application_id INT,
+    final_status ENUM('completed','not_completed','selected'),
+    rating_by_company INT,
+    certificate_url VARCHAR(255),
+    FOREIGN KEY (application_id) REFERENCES applications(application_id)
+        ON DELETE CASCADE
+);
+
+-- AI recommendations table
+CREATE TABLE ai_recommendations (
+    recommendation_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT,
+    posting_id INT,
+    score DECIMAL(5,2),
+    explanation TEXT,
+    FOREIGN KEY (student_id) REFERENCES students(user_id),
+    FOREIGN KEY (posting_id) REFERENCES internship_postings(posting_id)
+);
